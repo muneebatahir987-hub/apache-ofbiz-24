@@ -1,11 +1,12 @@
 FROM eclipse-temurin:17 AS builder
 
-# Cache bust
-ARG CACHEBUST=2
-
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git curl \
     && rm -rf /var/lib/apt/lists/*
+
+# Cache bust - increment to force rebuild
+ARG CACHEBUST=3
+RUN echo "Cache bust: $CACHEBUST"
 
 WORKDIR /builder
 
