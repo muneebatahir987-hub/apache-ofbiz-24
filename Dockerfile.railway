@@ -1,0 +1,63 @@
+FROM eclipse-temurin:17 AS builder
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /builder
+
+COPY gradle/wrapper/gradle-wrapper.properties gradle/wrapper/
+COPY gradle/wrapper/gradle-wrapper.jar gradle/wrapper/
+COPY --chmod=755 gradlew .
+
+COPY buildSrc/ buildSrc/
+COPY applications/ applications/
+COPY config/ config/
+COPY framework/ framework/
+COPY gradle/ gradle/
+COPY lib/ lib/
+COPY plugin[s]/ plugins/
+COPY themes/ themes/
+COPY APACHE2_HEADER build.gradle common.gradle gradle.properties NOTICE settings.gradle dependencies.gradle .
+
+RUN ./gradlew --console plain generateSecretKeys distTar --no-daemon
+
+FROM eclipse-temurin:17
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends xsltproc \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd ofbiz
+
+RUN mkdir --parents \
+    /docker-entrypoint-hooks/before-config-applied.d \
+    /docker-entrypoint-hooks/after-config-applied.d \
+    /docker-entrypoint-hooks/before-data-load.d \
+    /docker-entrypoint-hooks/after-data-load.d \
+    /docker-entrypoint-hooks/additional-data.d
+
+RUN chown -R ofbiz:ofbiz /docker-entrypoint-hooks
+
+USER ofbiz
+WORKDIR /ofbiz
+
+COPY --from=builder /builder/build/distributions/ofbiz.tar /tmp/ofbiz.tar
+RUN tar --extract --strip-components=1 --file=/tmp/ofbiz.tar && rm /tmp/ofbiz.tar
+
+RUN mkdir -p /ofbiz/runtime /ofbiz/config /ofbiz/lib-extra
+
+COPY --chmod=644 --chown=ofbiz:ofbiz VERSION .
+
+COPY --chmod=555 docker/docker-entrypoint.sh docker/send_ofbiz_stop_signal.sh .
+COPY --chmod=444 docker/disable-component.xslt .
+
+RUN mkdir templates
+COPY --chmod=444 docker/templates templates
+
+RUN /ofbiz/bin/ofbiz --load-data
+
+EXPOSE 8443
+
+ENTRYPOINT ["/ofbiz/docker-entrypoint.sh"]
+CMD ["bin/ofbiz"]
