@@ -4,6 +4,7 @@ gradle/wrapper/gradle-wrapper.jar
 applications/*/build
 framework/*/build
 /plugins/
+!/plugins/betcomponent/
 runtime/git-rebase/*
 runtime/SvnInfo.ftl
 runtime/GitInfo.ftl
