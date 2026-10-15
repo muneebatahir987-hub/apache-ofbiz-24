@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17 AS builder
+FROM eclipse-temurin:24 AS builder
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git curl \
@@ -27,7 +27,7 @@ COPY APACHE2_HEADER build.gradle common.gradle gradle.properties NOTICE settings
 
 RUN ./gradlew --console plain generateSecretKeys distTar --no-daemon
 
-FROM eclipse-temurin:17
+FROM eclipse-temurin:24
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends xsltproc \
